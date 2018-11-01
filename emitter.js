@@ -16,20 +16,22 @@ function handleEvent(contexts) {
 }
 
 function execFunc(obj, handler) {
+    const { func, times, frequency, funcCallsCount } = handler;
+
     let shouldCall = true;
-    if (handler.times !== 0 && handler.calls >= handler.times) {
+    if (times !== 0 && funcCallsCount >= times) {
         shouldCall = false;
     }
 
-    if (handler.frequency !== 0 && handler.calls % handler.frequency !== 0) {
+    if (frequency !== 0 && funcCallsCount % frequency !== 0) {
         shouldCall = false;
     }
 
     if (shouldCall) {
-        handler.func.call(obj);
+        func.call(obj);
     }
 
-    handler.calls++;
+    handler.funcCallsCount++;
 }
 
 /**
@@ -50,21 +52,23 @@ function getEmitter() {
          * @returns {Object}
          */
         on: function (event, context, handler, additional = { times: 0, frequency: 0 }) {
-            if (!events.has(event)) {
-                events.set(event, new Map());
+            let contexts = events.get(event);
+            if (!contexts) {
+                contexts = new Map();
+                events.set(event, contexts);
             }
 
-            const contexts = events.get(event);
-
-            if (!contexts.has(context)) {
-                contexts.set(context, []);
+            let handlers = contexts.get(context);
+            if (!handlers) {
+                handlers = [];
+                contexts.set(context, handlers);
             }
 
-            contexts.get(context).push({
+            handlers.push({
                 func: handler,
                 times: additional.times,
                 frequency: additional.frequency,
-                calls: 0
+                funcCallsCount: 0
             });
 
             return this;
@@ -99,13 +103,13 @@ function getEmitter() {
                 if (prev !== '') {
                     prev += '.';
                 }
-
-                allEvents.push(prev += part);
+                prev += part;
+                allEvents.push(prev);
             }
 
-            for (let cuurEvent of allEvents.reverse()) {
-                if (events.has(cuurEvent)) {
-                    handleEvent(events.get(cuurEvent));
+            for (let currentEvent of allEvents.reverse()) {
+                if (events.has(currentEvent)) {
+                    handleEvent(events.get(currentEvent));
                 }
             }
 
